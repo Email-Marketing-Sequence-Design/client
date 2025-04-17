@@ -11,6 +11,9 @@ import {
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 type EmailSequence = {
   subject: string;
@@ -113,13 +116,30 @@ const SaveScheduledButton = ({ nodes, edges }: SaveScheduledButtonProps) => {
 
     try {
       setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      toast("Sequence scheduled successfully:");
 
-      console.log("Sequence scheduled successfully:");
-      setIsDialogOpen(false);
-    } catch (error) {
+      const response = await axios.post(
+        `${API_URL}/api/schedule-sequence`,
+        sequenceData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Email sequence scheduled successfully!");
+        setIsDialogOpen(false);
+      } else {
+        throw new Error(response.data.error || "Failed to schedule sequence");
+      }
+    } catch (error: unknown) {
       console.error("Error scheduling sequence:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to schedule email sequence"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +177,7 @@ const SaveScheduledButton = ({ nodes, edges }: SaveScheduledButtonProps) => {
               <h4 className="font-medium">Email Sequence:</h4>
               {sequenceData?.emails.map((email, index) => (
                 <div
-                  key={index}
+                  key={email.subject + index}
                   className="border rounded-lg p-3 space-y-2 text-sm"
                 >
                   {email.delay && (
