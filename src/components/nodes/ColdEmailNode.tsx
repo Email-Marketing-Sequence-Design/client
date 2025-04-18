@@ -21,10 +21,10 @@ import {
 } from "@/components/ui/form";
 import { useState } from "react";
 
-type ColdEmailData= {
+type ColdEmailData = {
   subject: string;
   body: string;
-}
+};
 
 const schema = yup.object({
   subject: yup.string().required(),
@@ -32,7 +32,7 @@ const schema = yup.object({
 });
 
 export function ColdEmailNode({ data, id }: NodeProps<Node<ColdEmailData>>) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const { setNodes } = useReactFlow();
 
   const form = useForm({

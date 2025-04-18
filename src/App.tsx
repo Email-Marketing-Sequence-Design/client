@@ -62,6 +62,7 @@ function App() {
   const [selectedAddNodeId, setSelectedAddNodeId] = useState<string | null>(
     null
   );
+  const [isNodeSelectorOpen, setIsNodeSelectorOpen] = useState(false);
 
   console.log("Nodes: ", nodes);
   console.log("Edges: ", edges);
@@ -70,9 +71,7 @@ function App() {
     (params: Connection) => {
       console.log("onConnect: ", params);
       const nodeConnected = edges.find((edge) => edge.target === params.target);
-      console.log("nodeConnected: ", nodeConnected);
 
-      // Only add edge if target node is not already connected
       if (!nodeConnected) {
         setEdges((eds) => addEdge(params, eds));
       }
@@ -111,6 +110,7 @@ function App() {
 
   const handleAddButtonClick = (nodeId: string) => {
     setSelectedAddNodeId(nodeId);
+    setIsNodeSelectorOpen(true);
   };
 
   const getLastNodeBeforeAddButton = (
@@ -151,14 +151,8 @@ function App() {
       },
       data:
         type === "coldEmail"
-          ? {
-              subject: "",
-              body: "",
-            }
-          : {
-              value: 1,
-              unit: "days",
-            },
+          ? { subject: "", body: "" }
+          : { value: 0, unit: "hours" },
       width: 250,
     };
 
@@ -199,18 +193,23 @@ function App() {
     ]);
     setEdges(newEdges);
     setSelectedAddNodeId(null);
+    setIsNodeSelectorOpen(false);
   };
 
   return (
     <div className="h-full flex flex-col items-center">
       <div className="w-[80svw] h-[100svh] border relative">
         <SaveScheduledButton nodes={nodes} edges={edges} />
-        {selectedAddNodeId && (
-          <NodeSelector
-            onSelect={handleAddNode}
-            lastNodeType={getLastNodeBeforeAddButton(selectedAddNodeId)}
-          />
-        )}
+        <NodeSelector
+          isOpen={isNodeSelectorOpen}
+          onClose={() => setIsNodeSelectorOpen(false)}
+          onSelect={handleAddNode}
+          lastNodeType={
+            selectedAddNodeId
+              ? getLastNodeBeforeAddButton(selectedAddNodeId)
+              : undefined
+          }
+        />
         <ReactFlow
           nodes={nodes}
           edges={edges}
