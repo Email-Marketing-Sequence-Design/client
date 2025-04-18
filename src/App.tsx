@@ -67,13 +67,24 @@ function App() {
   console.log("Edges: ", edges);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      console.log("onConnect: ", params);
+      const nodeConnected = edges.find((edge) => edge.target === params.target);
+      console.log("nodeConnected: ", nodeConnected);
+
+      // Only add edge if target node is not already connected
+      if (!nodeConnected) {
+        setEdges((eds) => addEdge(params, eds));
+      }
+    },
+    [edges, setEdges]
   );
 
   const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) =>
-      setEdges((eds) => applyEdgeChanges(changes, eds)),
+    (changes: EdgeChange[]) => {
+      console.log("onEdgesChange: ", changes);
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
     [setEdges]
   );
 
@@ -102,11 +113,13 @@ function App() {
     setSelectedAddNodeId(nodeId);
   };
 
-  const getLastNodeBeforeAddButton = (addButtonId: string): string | undefined => {
-    const edge = edges.find(e => e.target === addButtonId);
+  const getLastNodeBeforeAddButton = (
+    addButtonId: string
+  ): string | undefined => {
+    const edge = edges.find((e) => e.target === addButtonId);
     if (!edge) return undefined;
-    
-    const sourceNode = nodes.find(n => n.id === edge.source);
+
+    const sourceNode = nodes.find((n) => n.id === edge.source);
     return sourceNode?.type;
   };
 
@@ -191,9 +204,9 @@ function App() {
   return (
     <div className="h-full flex flex-col items-center">
       <div className="w-[80svw] h-[100svh] border relative">
-      <SaveScheduledButton nodes={nodes} edges={edges}/>
+        <SaveScheduledButton nodes={nodes} edges={edges} />
         {selectedAddNodeId && (
-          <NodeSelector 
+          <NodeSelector
             onSelect={handleAddNode}
             lastNodeType={getLastNodeBeforeAddButton(selectedAddNodeId)}
           />
