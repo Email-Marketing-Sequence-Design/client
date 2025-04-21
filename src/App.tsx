@@ -1,5 +1,5 @@
 import "@/App.css";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import {
   ReactFlow,
   MiniMap,
@@ -22,8 +22,8 @@ import { LeadSourceNode } from "@/components/nodes/LeadSourceNode";
 import { ColdEmailNode } from "@/components/nodes/ColdEmailNode";
 import { WaitDelayNode } from "@/components/nodes/WaitDelayNode";
 import { AddNodeButton } from "@/components/nodes/AddNodeButton";
-import { NodeSelector } from "@/components/NodeSelector";
 import SaveScheduledButton from "./components/SaveScheduledButton";
+import { toast } from "sonner";
 
 const nodeTypes = {
   leadSource: LeadSourceNode,
@@ -47,11 +47,11 @@ function App() {
     {
       id: "add-1",
       type: "addButton",
-      position: { x: 255, y: 100 },
+      position: { x: 255, y: 150 },
       draggable: false,
       width: 40,
       height: 40,
-      data: { onClick: () => handleAddButtonClick("add-1") },
+      data: {},
     },
   ];
   const initialEdges: Edge[] = [
@@ -59,10 +59,6 @@ function App() {
   ];
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
-  const [selectedAddNodeId, setSelectedAddNodeId] = useState<string | null>(
-    null
-  );
-  const [isNodeSelectorOpen, setIsNodeSelectorOpen] = useState(false);
 
   console.log("Nodes: ", nodes);
   console.log("Edges: ", edges);
@@ -70,18 +66,45 @@ function App() {
   const onConnect = useCallback(
     (params: Connection) => {
       console.log("onConnect: ", params);
-      const nodeConnected = edges.find((edge) => edge.target === params.target);
+      // Only allow connection if:
+      // 1. Target node doesn't already have a connection
+      // 2. Source node doesn't already have a connection
+      // 3. Not trying to connect waitDelay to waitDelay
 
-      if (!nodeConnected) {
-        setEdges((eds) => addEdge(params, eds));
+      const targetConnected = edges.find((edge) => edge.target === params.target);
+      const sourceConnected = edges.find((edge) => edge.source === params.source);
+      
+      // Check if trying to connect two waitDelay nodes by checking ID prefixes
+      const isWaitDelayToWaitDelay =
+        params.source?.startsWith("waitDelay-") &&
+        params.target?.startsWith("waitDelay-");
+
+      if (targetConnected) {
+        console.warn("Cannot connect: Target node already has a connection");
+        toast("This step already has a connection. Please remove the existing connection first.");
+        return;
       }
+
+      if (sourceConnected) {
+        console.warn("Cannot connect: Source node already has a connection");
+        toast("This step can only connect to one next step. Please remove the existing connection first.");
+        return;
+      }
+
+      if (isWaitDelayToWaitDelay) {
+        console.warn("Cannot connect: Cannot connect two delay nodes directly");
+        toast("You cannot connect two delay steps directly. Please add an email step between delays.");
+        return;
+      }
+
+      setEdges((eds) => addEdge(params, eds));
     },
     [edges, setEdges]
   );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      console.log("onEdgesChange: ", changes);
+      console.log("Edges Change: ", changes);
       setEdges((eds) => applyEdgeChanges(changes, eds));
     },
     [setEdges]
@@ -89,127 +112,18 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const selectedNode = changes.find(
-        (change) => change.type === "select" && change.selected === true
-      );
-
-      if (
-        selectedNode &&
-        "id" in selectedNode &&
-        selectedNode.id.startsWith("add-")
-      ) {
-        setSelectedAddNodeId(selectedNode.id);
-      } else {
-        setSelectedAddNodeId(null);
-      }
-
+      console.log('Node change: ', changes)
+      const removedNode = changes.find((node)=>node.type==='remove')
+      console.log("remove node: ", removedNode)
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]
   );
 
-  const handleAddButtonClick = (nodeId: string) => {
-    setSelectedAddNodeId(nodeId);
-    setIsNodeSelectorOpen(true);
-  };
-
-  const getLastNodeBeforeAddButton = (
-    addButtonId: string
-  ): string | undefined => {
-    const edge = edges.find((e) => e.target === addButtonId);
-    if (!edge) return undefined;
-
-    const sourceNode = nodes.find((n) => n.id === edge.source);
-    return sourceNode?.type;
-  };
-
-  const handleAddNode = (type: "coldEmail" | "waitDelay") => {
-    if (!selectedAddNodeId) return;
-
-    const addButtonNode = nodes.find((n) => n.id === selectedAddNodeId);
-    if (!addButtonNode) return;
-
-    const lastNodeType = getLastNodeBeforeAddButton(selectedAddNodeId);
-
-    if (
-      (type === "waitDelay" && lastNodeType !== "coldEmail") ||
-      (!lastNodeType && type === "waitDelay")
-    ) {
-      console.log("Invalid node sequence");
-      return;
-    }
-
-    const newNodeId = `${type}-${Date.now()}`;
-    const newAddButtonId = `add-${Date.now()}`;
-
-    const newNode: Node = {
-      id: newNodeId,
-      type,
-      position: {
-        x: 150,
-        y: addButtonNode.position.y,
-      },
-      data:
-        type === "coldEmail"
-          ? { subject: "", body: "" }
-          : { value: 0, unit: "hours" },
-      width: 250,
-    };
-
-    const newAddButton: Node = {
-      id: newAddButtonId,
-      type: "addButton",
-      position: {
-        x: 255,
-        y: addButtonNode.position.y + 100,
-      },
-      data: {
-        onClick: () => handleAddButtonClick(newAddButtonId),
-      },
-      width: 40,
-      height: 40,
-    };
-
-    const newEdges: Edge[] = [
-      ...edges.filter((e) => e.target !== selectedAddNodeId),
-      {
-        id: `e-${
-          edges.find((e) => e.target === selectedAddNodeId)?.source
-        }-${newNodeId}`,
-        source: edges.find((e) => e.target === selectedAddNodeId)?.source ?? "",
-        target: newNodeId,
-      },
-      {
-        id: `e-${newNodeId}-${newAddButtonId}`,
-        source: newNodeId,
-        target: newAddButtonId,
-      },
-    ];
-
-    setNodes((nodes) => [
-      ...nodes.filter((n) => n.id !== selectedAddNodeId),
-      newNode,
-      newAddButton,
-    ]);
-    setEdges(newEdges);
-    setSelectedAddNodeId(null);
-    setIsNodeSelectorOpen(false);
-  };
-
   return (
     <div className="h-full flex flex-col items-center">
-      <div className="w-[80svw] h-[100svh] border relative">
+      <div className="w-[100svw] h-[100svh] border relative">
         <SaveScheduledButton nodes={nodes} edges={edges} />
-        <NodeSelector
-          isOpen={isNodeSelectorOpen}
-          onClose={() => setIsNodeSelectorOpen(false)}
-          onSelect={handleAddNode}
-          lastNodeType={
-            selectedAddNodeId
-              ? getLastNodeBeforeAddButton(selectedAddNodeId)
-              : undefined
-          }
-        />
         <ReactFlow
           nodes={nodes}
           edges={edges}

@@ -6,52 +6,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import * as yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { useState } from "react";
+import { DelayForm, type DelayFormData } from "@/components/forms/DelayForm";
+import { Pencil, Trash2, Clock } from "lucide-react";
+import { DeleteConfirmationDialog } from "@/components/modals/DeleteConfirmationDialog";
 
-type WaitDelayData = {
-  value: number;
-  unit: "minutes" | "hours" | "days";
-}
-
-
-const schema = yup.object({
-  value: yup.number().required().positive(),
-  unit: yup.string().oneOf(["minutes", "hours", "days"]).required(),
-});
-
-export function WaitDelayNode({ data, id }: NodeProps<Node<WaitDelayData>>) {
+export function WaitDelayNode({ data, id }: NodeProps<Node<DelayFormData>>) {
   const [isOpen, setIsOpen] = useState(false);
-  const { setNodes } = useReactFlow();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const { setNodes, deleteElements } = useReactFlow();
 
-  const form = useForm<{ value: number; unit: WaitDelayData["unit"] }>({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      value: data.value || 1,
-      unit: data.unit || "hours",
-    },
-  });
-
-  const onSubmit = (values:WaitDelayData) => {
-    form.reset(values);
+  const handleSubmit = (values: DelayFormData) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -63,97 +28,79 @@ export function WaitDelayNode({ data, id }: NodeProps<Node<WaitDelayData>>) {
     setIsOpen(false);
   };
 
-  const handleCancel = () => {
-    form.reset({ unit: data.unit, value: data.value });
-    setIsOpen(false);
+  const handleDelete = () => {
+    deleteElements({ nodes: [{ id }] });
+    setIsDeleteOpen(false);
   };
+
   return (
-    <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400">
+    <div className="group relative px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-blue-200 hover:border-blue-300 transition-all">
       <Handle
         type="target"
         position={Position.Top}
-        className="w-16 !bg-teal-500"
+        className="w-16 !bg-blue-500"
       />
 
-      <Dialog open={isOpen}>
+      {/* Action Buttons */}
+      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            setIsOpen(true);
-          }}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-400 hover:text-blue-500"
+          onClick={() => setIsOpen(true)}
         >
-          Wait/Delay
+          <Pencil className="h-4 w-4" />
         </Button>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set Delay Duration</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duration</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="1" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="unit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select unit" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="minutes">Minutes</SelectItem>
-                        <SelectItem value="hours">Hours</SelectItem>
-                        <SelectItem value="days">Days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  onClick={handleCancel}
-                  variant={"destructive"}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-400 hover:text-red-500"
+          onClick={() => setIsDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Node Content */}
+      <div className="mb-2 font-medium text-blue-600 flex items-center">
+        <Clock className="h-4 w-4 mr-2" />
+        Wait/Delay
+      </div>
 
       {data.value > 0 && (
-        <div className="mt-2 text-sm text-gray-600">
-          Delay: {data.value} {data.unit}(s)
+        <div className="text-sm text-gray-600">
+          <span className="font-medium">Duration:</span> {data.value} {data.unit}.
         </div>
       )}
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-16 !bg-teal-500"
+        className="w-16 !bg-blue-500"
+      />
+
+      {/* Edit Dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-medium">Edit Delay</DialogTitle>
+            <p className="text-sm text-gray-500">
+              Modify the waiting duration.
+            </p>
+          </DialogHeader>
+          <DelayForm
+            defaultValues={data}
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDelete}
       />
     </div>
   );

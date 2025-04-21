@@ -6,45 +6,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import * as yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { EmailForm, type EmailFormData } from "@/components/forms/EmailForm";
 import { useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
+import { DeleteConfirmationDialog } from "@/components/modals/DeleteConfirmationDialog";
 
-type ColdEmailData = {
-  subject: string;
-  body: string;
-};
+export function ColdEmailNode({ data, id }: NodeProps<Node<EmailFormData>>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const { setNodes, deleteElements } = useReactFlow();
 
-const schema = yup.object({
-  subject: yup.string().required(),
-  body: yup.string().required(),
-});
-
-export function ColdEmailNode({ data, id }: NodeProps<Node<ColdEmailData>>) {
-  const [isOpen, setIsOpen] = useState(true);
-  const { setNodes } = useReactFlow();
-
-  const form = useForm({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      subject: data.subject || "",
-      body: data.body || "",
-    },
-  });
-
-  const onSubmit = (values: ColdEmailData) => {
-    form.reset(values);
+  const handleSubmit = (values: EmailFormData) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -56,87 +28,84 @@ export function ColdEmailNode({ data, id }: NodeProps<Node<ColdEmailData>>) {
     setIsOpen(false);
   };
 
-  const handleCancel = () => {
-    form.reset({ body: data.body, subject: data.subject });
-    setIsOpen(false);
+  const handleDelete = () => {
+    deleteElements({ nodes: [{ id }] });
+    setIsDeleteOpen(false);
   };
 
   return (
-    <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-stone-400">
+    <div className="group relative px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-purple-200 hover:border-purple-300 transition-all">
       <Handle
         type="target"
         position={Position.Top}
-        className="w-16 !bg-teal-500"
+        className="w-16 !bg-purple-500"
       />
 
-      <Dialog open={isOpen}>
+      {/* Action Buttons */}
+      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => {
-            setIsOpen(true);
-          }}
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-400 hover:text-purple-500"
+          onClick={() => setIsOpen(true)}
         >
-          Cold Email
+          <Pencil className="h-4 w-4" />
         </Button>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Compose Email</DialogTitle>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Email subject..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="body"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Body</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Email body..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  onClick={handleCancel}
-                  variant={"destructive"}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-gray-400 hover:text-red-500"
+          onClick={() => setIsDeleteOpen(true)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Node Content */}
+      <div className="mb-2 font-medium text-purple-600 flex items-center">
+        <span className="text-lg mr-2">✉</span>
+        Cold Email
+      </div>
 
       {data.subject && (
-        <div className="mt-2 text-sm text-gray-600">
-          <div>Subject: {data.subject}</div>
-          <div className="truncate">Body: {data.body}</div>
+        <div className="space-y-1 text-sm text-gray-600">
+          <div className="truncate">
+            <span className="font-medium">Subject:</span> {data.subject}
+          </div>
+          <div className="truncate">
+            <span className="font-medium">Body:</span> {data.body}
+          </div>
         </div>
       )}
 
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-16 !bg-teal-500"
+        className="w-16 !bg-purple-500"
+      />
+
+      {/* Edit Dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-medium">Edit Email</DialogTitle>
+            <p className="text-sm text-gray-500">
+              Modify the content of your email.
+            </p>
+          </DialogHeader>
+          <EmailForm
+            defaultValues={data}
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmationDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={handleDelete}
       />
     </div>
   );
