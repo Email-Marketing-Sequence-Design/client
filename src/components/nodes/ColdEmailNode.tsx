@@ -14,7 +14,7 @@ import { DeleteConfirmationDialog } from "@/components/modals/DeleteConfirmation
 export function ColdEmailNode({ data, id }: NodeProps<Node<EmailFormData>>) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const { setNodes, deleteElements } = useReactFlow();
+  const { setNodes, deleteElements, getEdges, setEdges ,getNodes } = useReactFlow();
 
   const handleSubmit = (values: EmailFormData) => {
     setNodes((nds) =>
@@ -29,6 +29,33 @@ export function ColdEmailNode({ data, id }: NodeProps<Node<EmailFormData>>) {
   };
 
   const handleDelete = () => {
+    // Find incoming and outgoing edges for this node
+    const edges = getEdges();
+    const incomingEdge = edges.find(e => e.target === id);
+    const outgoingEdge = edges.find(e => e.source === id);
+
+    console.log("incomingEdge: ",incomingEdge)
+    console.log("outgoingEdge: ",outgoingEdge)
+
+    // If we have both incoming and outgoing edges
+    if (incomingEdge && outgoingEdge) {
+      // Only create connection if at least one adjacent node is not a delay type
+      const nodes = getNodes();
+      const sourceNode = nodes.find(n => n.id === incomingEdge.source);
+      const targetNode = nodes.find(n => n.id === outgoingEdge.target);
+
+      if (!(sourceNode?.type === 'waitDelay' && targetNode?.type === 'waitDelay')) {
+        const newEdge = {
+          id: `e-${incomingEdge.source}-${outgoingEdge.target}`,
+          source: incomingEdge.source,
+          target: outgoingEdge.target
+        };
+        console.log('newEdge: ', newEdge)
+        setEdges(edges => [...edges, newEdge]);
+      }
+    }
+
+    // Delete the node
     deleteElements({ nodes: [{ id }] });
     setIsDeleteOpen(false);
   };

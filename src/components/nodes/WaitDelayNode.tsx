@@ -14,7 +14,7 @@ import { DeleteConfirmationDialog } from "@/components/modals/DeleteConfirmation
 export function WaitDelayNode({ data, id }: NodeProps<Node<DelayFormData>>) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const { setNodes, deleteElements } = useReactFlow();
+  const { setNodes, deleteElements, getEdges, setEdges ,getNodes} = useReactFlow();
 
   const handleSubmit = (values: DelayFormData) => {
     setNodes((nds) =>
@@ -29,6 +29,33 @@ export function WaitDelayNode({ data, id }: NodeProps<Node<DelayFormData>>) {
   };
 
   const handleDelete = () => {
+    // Find incoming and outgoing edges for this node
+    const edges = getEdges();
+    const incomingEdge = edges.find(e => e.target === id);
+    const outgoingEdge = edges.find(e => e.source === id);
+
+    console.log("incomingEdge: ",incomingEdge)
+    console.log("outgoingEdge: ",outgoingEdge)
+
+    // If we have both incoming and outgoing edges
+    if (incomingEdge && outgoingEdge) {
+      // Only create connection if at least one adjacent node is not a delay type
+      const nodes = getNodes();
+      const sourceNode = nodes.find(n => n.id === incomingEdge.source);
+      const targetNode = nodes.find(n => n.id === outgoingEdge.target);
+
+      if (!(sourceNode?.type === 'waitDelay' && targetNode?.type === 'waitDelay')) {
+        const newEdge = {
+          id: `e-${incomingEdge.source}-${outgoingEdge.target}`,
+          source: incomingEdge.source,
+          target: outgoingEdge.target
+        };
+        console.log('newEdge: ', newEdge)
+        setEdges(edges => [...edges, newEdge]);
+      }
+    }
+
+    // Delete the node
     deleteElements({ nodes: [{ id }] });
     setIsDeleteOpen(false);
   };
@@ -69,7 +96,8 @@ export function WaitDelayNode({ data, id }: NodeProps<Node<DelayFormData>>) {
 
       {data.value > 0 && (
         <div className="text-sm text-gray-600">
-          <span className="font-medium">Duration:</span> {data.value} {data.unit}.
+          <span className="font-medium">Duration:</span> {data.value}{" "}
+          {data.unit}.
         </div>
       )}
 
@@ -83,7 +111,9 @@ export function WaitDelayNode({ data, id }: NodeProps<Node<DelayFormData>>) {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="space-y-2">
-            <DialogTitle className="text-xl font-medium">Edit Delay</DialogTitle>
+            <DialogTitle className="text-xl font-medium">
+              Edit Delay
+            </DialogTitle>
             <p className="text-sm text-gray-500">
               Modify the waiting duration.
             </p>
