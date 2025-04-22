@@ -22,25 +22,25 @@ import { LeadSourceNode } from "@/components/nodes/LeadSourceNode";
 import { ColdEmailNode } from "@/components/nodes/ColdEmailNode";
 import { WaitDelayNode } from "@/components/nodes/WaitDelayNode";
 import { AddNodeButton } from "@/components/nodes/AddNodeButton";
-import SaveScheduledButton from "./components/SaveScheduledButton";
+import SaveScheduledButton from "@/components/SaveScheduledButton";
 import { toast } from "sonner";
+import { AddLeadSourceNode } from "@/components/nodes/AddSourceButton";
 
 const nodeTypes = {
   leadSource: LeadSourceNode,
   coldEmail: ColdEmailNode,
   waitDelay: WaitDelayNode,
   addButton: AddNodeButton,
+  addLeadSource: AddLeadSourceNode,
 };
 
 function App() {
   const initialNodes: Node[] = [
     {
-      id: "lead-source",
-      type: "leadSource",
+      id: "add-lead-source",
+      type: "addLeadSource",
       position: { x: 150, y: 0 },
-      data: {
-        email: "",
-      },
+      data: {},
       draggable: false,
       width: 250,
     },
@@ -54,15 +54,14 @@ function App() {
       data: {},
     },
   ];
-  const initialEdges: Edge[] = [
-    { id: "e-lead-source-add1", source: "lead-source", target: "add-1" },
-  ];
+  const initialEdges: Edge[] = [];
   const [nodes, setNodes] = useNodesState(initialNodes);
   const [edges, setEdges] = useEdgesState(initialEdges);
 
+  const hasLeadSource = nodes.some((node) => node.type === "leadSource");
+  console.log("hasLeadSource: ", hasLeadSource);
   console.log("Nodes: ", nodes);
   console.log("Edges: ", edges);
-
   const onConnect = useCallback(
     (params: Connection) => {
       console.log("onConnect: ", params);
@@ -71,9 +70,13 @@ function App() {
       // 2. Source node doesn't already have a connection
       // 3. Not trying to connect waitDelay to waitDelay
 
-      const targetConnected = edges.find((edge) => edge.target === params.target);
-      const sourceConnected = edges.find((edge) => edge.source === params.source);
-      
+      const targetConnected = edges.find(
+        (edge) => edge.target === params.target
+      );
+      const sourceConnected = edges.find(
+        (edge) => edge.source === params.source
+      );
+
       // Check if trying to connect two waitDelay nodes by checking ID prefixes
       const isWaitDelayToWaitDelay =
         params.source?.startsWith("waitDelay-") &&
@@ -81,19 +84,25 @@ function App() {
 
       if (targetConnected) {
         console.warn("Cannot connect: Target node already has a connection");
-        toast("This step already has a connection. Please remove the existing connection first.");
+        toast(
+          "This step already has a connection. Please remove the existing connection first."
+        );
         return;
       }
 
       if (sourceConnected) {
         console.warn("Cannot connect: Source node already has a connection");
-        toast("This step can only connect to one next step. Please remove the existing connection first.");
+        toast(
+          "This step can only connect to one next step. Please remove the existing connection first."
+        );
         return;
       }
 
       if (isWaitDelayToWaitDelay) {
         console.warn("Cannot connect: Cannot connect two delay nodes directly");
-        toast("You cannot connect two delay steps directly. Please add an email step between delays.");
+        toast(
+          "You cannot connect two delay steps directly. Please add an email step between delays."
+        );
         return;
       }
 
@@ -112,9 +121,34 @@ function App() {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      console.log('Node change: ', changes)
-      const removedNode = changes.find((node)=>node.type==='remove')
-      console.log("remove node: ", removedNode)
+      console.log("Node Changes: ", changes);
+
+      const removedLeadSource = changes.find(
+        (change) => change.type === "remove" && change.id === "lead-source"
+      );
+
+      console.log("removed lead node: ", removedLeadSource);
+
+      // If lead source is removed, replace it with an add lead source node
+      if (removedLeadSource) {
+        setNodes((nodes) => {
+          const removedNodeIndex = nodes.findIndex(
+            (node) => node.id === "lead-source"
+          );
+          const newNodes = [...nodes];
+          newNodes[removedNodeIndex] = {
+            id: "add-lead-source",
+            type: "addLeadSource",
+            position: nodes[removedNodeIndex].position,
+            data: {},
+            draggable: false,
+            width: 250,
+          };
+          return applyNodeChanges(changes, newNodes);
+        });
+        return;
+      }
+
       setNodes((nds) => applyNodeChanges(changes, nds));
     },
     [setNodes]

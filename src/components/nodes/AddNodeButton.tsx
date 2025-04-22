@@ -45,7 +45,7 @@ export function AddNodeButton({ id }: NodeProps) {
 
   const handleAddEmailNode = (formData: EmailFormData) => {
     if (!selectedAddNodeId) return;
-
+    console.log("selected add node id: ", selectedAddNodeId);
     const addButtonNode = getNodes().find((n) => n.id === selectedAddNodeId);
     if (!addButtonNode) return;
 
@@ -75,16 +75,18 @@ export function AddNodeButton({ id }: NodeProps) {
       height: 40,
     };
 
+    const sourceEdge = getEdges().find((e) => e.target === selectedAddNodeId);
     const newEdges: Edge[] = [
       ...getEdges().filter((e) => e.target !== selectedAddNodeId),
-      {
-        id: `e-${
-          getEdges().find((e) => e.target === selectedAddNodeId)?.source
-        }-${newNodeId}`,
-        source:
-          getEdges().find((e) => e.target === selectedAddNodeId)?.source ?? "",
-        target: newNodeId,
-      },
+      ...(sourceEdge
+        ? [
+            {
+              id: `e-${sourceEdge.source}-${newNodeId}`,
+              source: sourceEdge.source,
+              target: newNodeId,
+            },
+          ]
+        : []),
       {
         id: `e-${newNodeId}-${newAddButtonId}`,
         source: newNodeId,
@@ -133,17 +135,18 @@ export function AddNodeButton({ id }: NodeProps) {
       width: 40,
       height: 40,
     };
-
+    const sourceEdge = getEdges().find((e) => e.target === selectedAddNodeId);
     const newEdges: Edge[] = [
       ...getEdges().filter((e) => e.target !== selectedAddNodeId),
-      {
-        id: `e-${
-          getEdges().find((e) => e.target === selectedAddNodeId)?.source
-        }-${newNodeId}`,
-        source:
-          getEdges().find((e) => e.target === selectedAddNodeId)?.source ?? "",
-        target: newNodeId,
-      },
+      ...(sourceEdge
+        ? [
+            {
+              id: `e-${sourceEdge.source}-${newNodeId}`,
+              source: sourceEdge.source,
+              target: newNodeId,
+            },
+          ]
+        : []),
       {
         id: `e-${newNodeId}-${newAddButtonId}`,
         source: newNodeId,
@@ -182,7 +185,9 @@ export function AddNodeButton({ id }: NodeProps) {
         return (
           <>
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-xl font-medium">Add New Node</DialogTitle>
+              <DialogTitle className="text-xl font-medium">
+                Add New Node
+              </DialogTitle>
               <p className="text-sm text-gray-500">
                 Select the type of node you want to add to your sequence.
               </p>
@@ -227,7 +232,9 @@ export function AddNodeButton({ id }: NodeProps) {
         return (
           <>
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-xl font-medium">Compose Email</DialogTitle>
+              <DialogTitle className="text-xl font-medium">
+                Compose Email
+              </DialogTitle>
               <p className="text-sm text-gray-500">
                 Create an email to be sent in your sequence.
               </p>
@@ -239,7 +246,9 @@ export function AddNodeButton({ id }: NodeProps) {
         return (
           <>
             <DialogHeader className="space-y-2">
-              <DialogTitle className="text-xl font-medium">Set Delay</DialogTitle>
+              <DialogTitle className="text-xl font-medium">
+                Set Delay
+              </DialogTitle>
               <p className="text-sm text-gray-500">
                 Specify how long to wait before sending the next email.
               </p>

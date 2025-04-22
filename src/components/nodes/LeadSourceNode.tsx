@@ -6,42 +6,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import * as yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+  LeadSourceForm,
+  type LeadSourceFormData,
+} from "@/components/forms/LeadSourceForm";
 import { useState } from "react";
 import { Pencil, UserCircle } from "lucide-react";
 
-type LeadSourceData = {
-  email: string;
-};
-
-const schema = yup.object({
-  email: yup.string().email().required(),
-});
-
-export function LeadSourceNode({ data, id }: NodeProps<Node<LeadSourceData>>) {
+export function LeadSourceNode({
+  data,
+  id,
+}: NodeProps<Node<LeadSourceFormData>>) {
   const [isOpen, setIsOpen] = useState(false);
   const { setNodes } = useReactFlow();
 
-  const form = useForm({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      email: data.email || "",
-    },
-  });
-
-  const onSubmit = (values: LeadSourceData) => {
-    form.reset(values);
+  const handleSubmit = (values: LeadSourceFormData) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === id) {
@@ -53,14 +32,9 @@ export function LeadSourceNode({ data, id }: NodeProps<Node<LeadSourceData>>) {
     setIsOpen(false);
   };
 
-  const handleCancel = () => {
-    form.reset({ email: data.email });
-    setIsOpen(false);
-  };
-
   return (
     <div className="group relative px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-teal-200 hover:border-teal-300 transition-all">
-      {/* Action Button - Only Edit for LeadSource */}
+      {/* Action Buttons */}
       <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
@@ -95,45 +69,17 @@ export function LeadSourceNode({ data, id }: NodeProps<Node<LeadSourceData>>) {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl font-medium">
-              {data.email ? "Edit" : "Add"} Lead Source
+              Edit Lead Source
             </DialogTitle>
             <p className="text-sm text-gray-500">
-              {data.email ? "Modify" : "Set"} the lead source email address.
+              Modify the lead source email address.
             </p>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="john@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  onClick={handleCancel}
-                  variant="outline"
-                  className="px-4 hover:bg-gray-50"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="px-4 bg-teal-500 hover:bg-teal-600"
-                >
-                  Save
-                </Button>
-              </div>
-            </form>
-          </Form>
+          <LeadSourceForm
+            defaultValues={data}
+            onSubmit={handleSubmit}
+            onCancel={() => setIsOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
