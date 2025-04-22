@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Edge, Node } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import {
   Dialog,
   DialogContent,
@@ -26,15 +26,14 @@ type ApiPayload = {
   emails: EmailSequence[];
 };
 
-type SaveScheduledButtonProps = {
-  nodes: Node[];
-  edges: Edge[];
-};
-
-const SaveScheduledButton = ({ nodes, edges }: SaveScheduledButtonProps) => {
+const SaveScheduledButton = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sequenceData, setSequenceData] = useState<ApiPayload | null>(null);
+  const { getEdges, getNodes } = useReactFlow();
+
+  const edges = getEdges();
+  const nodes = getNodes();
 
   const formatDelayString = (
     value: number,
@@ -131,7 +130,7 @@ const SaveScheduledButton = ({ nodes, edges }: SaveScheduledButtonProps) => {
         toast.success("Email sequence scheduled successfully!");
         setIsDialogOpen(false);
       } else {
-        throw new Error(response.data.error || "Failed to schedule sequence");
+        throw new Error(response.data.error ?? "Failed to schedule sequence");
       }
     } catch (error: unknown) {
       console.error("Error scheduling sequence:", error);

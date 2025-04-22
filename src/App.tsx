@@ -15,6 +15,7 @@ import {
   Connection,
   EdgeChange,
   NodeChange,
+  Panel,
 } from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
@@ -22,9 +23,10 @@ import { LeadSourceNode } from "@/components/nodes/LeadSourceNode";
 import { ColdEmailNode } from "@/components/nodes/ColdEmailNode";
 import { WaitDelayNode } from "@/components/nodes/WaitDelayNode";
 import { AddNodeButton } from "@/components/nodes/AddNodeButton";
-import SaveScheduledButton from "@/components/SaveScheduledButton";
+import SaveScheduledButton from "@/components/panels/SaveScheduledButton";
 import { toast } from "sonner";
 import { AddLeadSourceNode } from "@/components/nodes/AddSourceButton";
+import { AddNodesPanel } from "@/components/panels/AddNodesPanel";
 
 const nodeTypes = {
   leadSource: LeadSourceNode,
@@ -154,10 +156,47 @@ function App() {
     [setNodes]
   );
 
+  const handleAddLeadSource = useCallback(() => {
+    setNodes((nodes) => [
+      {
+        id: "add-lead-source",
+        type: "addLeadSource",
+        position: { x: 150, y: 0 },
+        data: {},
+        draggable: false,
+        width: 250,
+      },
+      ...nodes,
+    ]);
+  }, [setNodes]);
+
+  const handleAddNodeButton = useCallback(() => {
+    // Find the last node to position the new add button below it
+    const lastNode = [...nodes].sort(
+      (a, b) => (b.position.y || 0) - (a.position.y || 0)
+    )[0];
+
+    console.log("last node: ", lastNode);
+    const newY = lastNode ? (lastNode.position.y || 0) + 150 : 150;
+    console.log("newY: ", newY);
+
+    setNodes((nodes) => [
+      ...nodes,
+      {
+        id: `add-${Date.now()}`,
+        type: "addButton",
+        position: { x: 255, y: newY },
+        data: {},
+        draggable: false,
+        width: 40,
+        height: 40,
+      },
+    ]);
+  }, [nodes, setNodes]);
+
   return (
     <div className="h-full flex flex-col items-center">
       <div className="w-[100svw] h-[100svh] border relative">
-        <SaveScheduledButton nodes={nodes} edges={edges} />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -167,6 +206,16 @@ function App() {
           nodeTypes={nodeTypes}
           fitView
         >
+          <Panel position="top-right">
+            <SaveScheduledButton />
+          </Panel>
+          <Panel position="top-left">
+            <AddNodesPanel
+              nodes={nodes}
+              onAddLeadSource={handleAddLeadSource}
+              onAddNodeButton={handleAddNodeButton}
+            />
+          </Panel>
           <Controls />
           <MiniMap />
           <Background gap={12} size={1} />
