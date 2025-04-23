@@ -117,7 +117,7 @@ const SaveScheduledButton = () => {
       setIsLoading(true);
 
       const response = await axios.post(
-        `${API_URL}/api/schedule-sequence`,
+        `${API_URL}/api/v1/sequence/schedule-sequence`,
         sequenceData,
         {
           headers: {
